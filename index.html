@@ -211,7 +211,7 @@
         // Dynamic backend URL configuration
         const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
             ? ''
-            : 'https://classpulse-backend.onrender.com'; // Replace with your public backend URL (e.g. Render/Railway)
+            : 'http://localhost:5000'; // Fallback to local running Flask server (allows testing Vercel link with local backend)
 
         let audioCtx = null;
         let webcamStream = null;

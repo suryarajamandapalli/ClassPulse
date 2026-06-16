@@ -208,6 +208,11 @@
     <div id="toastHolder" class="fixed top-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
 
     <script>
+        // Dynamic backend URL configuration
+        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? ''
+            : 'https://classpulse-backend.onrender.com'; // Replace with your public backend URL (e.g. Render/Railway)
+
         let audioCtx = null;
         let webcamStream = null;
         let verifyTimer = null;
@@ -299,7 +304,7 @@
         // Check Face registration API
         async function checkFaceRegistration() {
             try {
-                const response = await fetch('/api/face/config');
+                const response = await fetch(API_BASE + '/api/face/config');
                 const data = await response.json();
                 
                 if (data.registered) {
@@ -388,7 +393,7 @@
                 const base64Img = canvas.toDataURL('image/jpeg', 0.85);
                 
                 try {
-                    const response = await fetch('/api/face/verify', {
+                    const response = await fetch(API_BASE + '/api/face/verify', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ image_base64: base64Img })
@@ -459,7 +464,7 @@
                 };
 
                 try {
-                    const response = await fetch('/api/face/register', {
+                    const response = await fetch(API_BASE + '/api/face/register', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(details)
@@ -491,6 +496,7 @@
                     registerBtn.innerHTML = '<i class="fas fa-camera"></i><span>Capture & Register Face</span>';
                 }
             });
+
 
             // Fallback button to manual password
             document.getElementById('passwordFallbackBtn').addEventListener('click', function() {

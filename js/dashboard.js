@@ -1,5 +1,10 @@
 // js/dashboard.js
 
+// Dynamic backend URL configuration
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? ''
+    : 'https://classpulse-backend.onrender.com'; // Replace with your public backend URL (e.g. Render/Railway)
+
 // Global state
 let students = [];
 let chart = null;
@@ -33,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Fetch all students from backend
 async function fetchStudents() {
     try {
-        const response = await fetch('/api/students');
+        const response = await fetch(API_BASE + '/api/students');
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -413,7 +418,7 @@ function closeStudentProfile() {
 // Toggle attendance for a student
 async function toggleAttendance(studentId) {
     try {
-        const response = await fetch('/api/attendance/toggle', {
+        const response = await fetch(API_BASE + '/api/attendance/toggle', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -610,7 +615,7 @@ async function handleScannedBarcode(code) {
     scanningActive = false; // stop loops
     
     try {
-        const response = await fetch('/api/attendance/scan', {
+        const response = await fetch(API_BASE + '/api/attendance/scan', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -737,7 +742,7 @@ async function handleUploadedCode(code, objectUrl) {
     resDiv.textContent = `Decoded: ${code}. Submitting to database...`;
     
     try {
-        const response = await fetch('/api/attendance/scan', {
+        const response = await fetch(API_BASE + '/api/attendance/scan', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

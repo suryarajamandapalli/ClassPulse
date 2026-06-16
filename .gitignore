@@ -1,0 +1,27 @@
+# Python virtual environment
+backend/.venv/
+.venv/
+ENV/
+env/
+
+# Compiled python files
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# SQLite database journals & conflict duplicates
+backend/*-journal
+backend/classpulse (2).db*
+backend/classpulse.db-journal
+backend/classpulse (2).db
+backend/classpulse (2).db-journal
+
+# Registered biometric face templates (secrets/cache)
+backend/face_registered.jpg
+backend/face_config.json
+
+# IDEs & System files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

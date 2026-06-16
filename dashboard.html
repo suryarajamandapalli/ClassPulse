@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassPulse | Advanced Student Attendance Dashboard</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Quagga (1D Barcodes) -->
+    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+    <!-- jsQR (QR Codes) -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #f1f5f9;
+        }
+        .glass-card {
+            background: rgba(17, 24, 39, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .slide-panel {
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .slide-panel.open {
+            transform: translateX(0);
+        }
+        .scanner-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .scanner-container {
+            position: relative;
+            width: 95%;
+            max-width: 700px;
+            height: 480px;
+            background: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        #scanner {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        #scanner video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .scan-frame {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 60%;
+            height: 50%;
+            border: 2px dashed rgba(99, 102, 241, 0.6);
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .scan-laser {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background-color: #6366f1;
+            box-shadow: 0 0 8px 2px #6366f1;
+            top: 0;
+            animation: laser-scan 2.5s linear infinite;
+            z-index: 11;
+        }
+        @keyframes laser-scan {
+            0% { top: 0%; }
+            50% { top: 100%; }
+            100% { top: 0%; }
+        }
+        /* custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.8);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.3);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.5);
+        }
+        /* glows */
+        .glow-indigo {
+            box-shadow: 0 0 20px 0 rgba(99, 102, 241, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans">
+    <!-- Header -->
+    <header class="glass-card sticky top-0 z-30 shadow-md border-b border-slate-900">
+        <div class="px-6 py-4 max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <div class="bg-gradient-to-tr from-indigo-600 to-indigo-500 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 transform -rotate-6">
+                    <i class="fas fa-graduation-cap text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-100 via-slate-100 to-cyan-100 bg-clip-text text-transparent">ClassPulse Dashboard</h1>
+                    <p class="text-xs text-slate-400">Welcome, <span id="welcomeUser" class="text-indigo-400 font-medium">Admin</span></p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button id="scanBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl flex items-center space-x-2 transition duration-200 active:scale-[0.98] font-medium shadow-lg shadow-emerald-950/20">
+                    <i class="fas fa-camera text-sm"></i>
+                    <span>Scan QR/Barcode</span>
+                </button>
+                <button id="openTestImageBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl flex items-center space-x-2 transition duration-200 active:scale-[0.98] font-medium shadow-lg shadow-indigo-950/20">
+                    <i class="fas fa-image text-sm"></i>
+                    <span>Test Image</span>
+                </button>
+                <button onclick="logout()" class="bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-900/40 px-4 py-2 rounded-xl flex items-center space-x-2 transition duration-200 active:scale-[0.98] font-medium">
+                    <i class="fas fa-sign-out-alt text-sm"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-1 w-full max-w-7xl mx-auto p-6 flex flex-col md:flex-row gap-6">
+        <!-- Main Content -->
+        <main class="flex-1 min-w-0">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <!-- Total Students -->
+                <div class="glass-card p-5 rounded-2xl glow-indigo hover:border-slate-800 transition duration-300">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-slate-400">Total Students</p>
+                            <p class="text-2xl font-bold text-slate-100 mt-1" id="totalStudents">—</p>
+                        </div>
+                        <div class="bg-indigo-500/10 p-3.5 rounded-xl border border-indigo-500/15">
+                            <i class="fas fa-users text-indigo-400 text-lg"></i>
+                        </div>
+                    </div>
+                </div>
+                <!-- Present Today -->
+                <div class="glass-card p-5 rounded-2xl glow-indigo hover:border-slate-800 transition duration-300">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-slate-400">Present Today</p>
+                            <p class="text-2xl font-bold text-emerald-400 mt-1" id="presentToday">—</p>
+                        </div>
+                        <div class="bg-emerald-500/10 p-3.5 rounded-xl border border-emerald-500/15">
+                            <i class="fas fa-user-check text-emerald-400 text-lg"></i>
+                        </div>
+                    </div>
+                </div>
+                <!-- Absent Today -->
+                <div class="glass-card p-5 rounded-2xl glow-indigo hover:border-slate-800 transition duration-300">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-slate-400">Absent Today</p>
+                            <p class="text-2xl font-bold text-rose-400 mt-1" id="absentToday">—</p>
+                        </div>
+                        <div class="bg-rose-500/10 p-3.5 rounded-xl border border-rose-500/15">
+                            <i class="fas fa-user-times text-rose-400 text-lg"></i>
+                        </div>
+                    </div>
+                </div>
+                <!-- Avg Attendance -->
+                <div class="glass-card p-5 rounded-2xl glow-indigo hover:border-slate-800 transition duration-300">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-slate-400">Average Attendance</p>
+                            <p class="text-2xl font-bold text-cyan-400 mt-1" id="avgAttendance">—</p>
+                        </div>
+                        <div class="bg-cyan-500/10 p-3.5 rounded-xl border border-cyan-500/15">
+                            <i class="fas fa-chart-line text-cyan-400 text-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student List -->
+            <div class="glass-card rounded-2xl border border-slate-900/60 overflow-hidden shadow-xl mb-6">
+                <!-- Filters Header -->
+                <div class="p-6 border-b border-slate-900/80 bg-slate-950/20">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <h2 class="text-lg font-bold text-slate-100 flex items-center">
+                            <i class="fas fa-list mr-2 text-indigo-400"></i>Student Roster
+                        </h2>
+                        <div class="flex flex-col sm:flex-row items-center gap-3">
+                            <!-- Search -->
+                            <div class="relative w-full sm:w-60">
+                                <input type="text" id="searchInput" placeholder="Search name or PIN..." 
+                                       class="w-full pl-9 pr-4 py-2 bg-slate-950/80 border border-slate-850 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/80 text-sm text-slate-100 placeholder-slate-500 transition duration-200">
+                                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 text-xs"></i>
+                            </div>
+                            <!-- Branch -->
+                            <select id="branchFilter" class="w-full sm:w-40 px-3 py-2 bg-slate-950/80 border border-slate-850 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/80 text-sm text-slate-300 transition duration-200">
+                                <option value="">All Branches</option>
+                                <option value="CSE">CSE</option>
+                                <option value="ECE">ECE</option>
+                                <option value="EEE">EEE</option>
+                                <option value="MECH">MECH</option>
+                            </select>
+                            <!-- Section -->
+                            <select id="sectionFilter" class="w-full sm:w-32 px-3 py-2 bg-slate-950/80 border border-slate-850 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/80 text-sm text-slate-300 transition duration-200">
+                                <option value="">All Sections</option>
+                                <option value="A">Section A</option>
+                                <option value="B">Section B</option>
+                                <option value="C">Section C</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead class="bg-slate-950/40 text-slate-400 text-xs font-semibold uppercase border-b border-slate-900">
+                            <tr>
+                                <th class="px-6 py-3.5 text-left tracking-wider">Student</th>
+                                <th class="px-6 py-3.5 text-left tracking-wider">PIN Number</th>
+                                <th class="px-6 py-3.5 text-left tracking-wider">Branch</th>
+                                <th class="px-6 py-3.5 text-left tracking-wider">Section</th>
+                                <th class="px-6 py-3.5 text-left tracking-wider">Attendance</th>
+                                <th class="px-6 py-3.5 text-left tracking-wider">Status Today</th>
+                                <th class="px-6 py-3.5 text-left tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentTableBody" class="divide-y divide-slate-900/60 bg-slate-900/10">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Analytics -->
+            <div class="glass-card rounded-2xl p-6 shadow-xl border border-slate-900/60 mb-6">
+                <h2 class="text-lg font-bold text-slate-100 mb-4 flex items-center">
+                    <i class="fas fa-chart-bar mr-2 text-indigo-400"></i>Attendance Analytics by Branch
+                </h2>
+                <div style="height: 380px;" class="relative">
+                    <canvas id="attendanceChart"></canvas>
+                </div>
+            </div>
+        </main>
+
+        <!-- Side Drawer Profile Panel -->
+        <aside id="sidePanel" class="slide-panel fixed right-0 top-0 h-full w-full sm:w-[420px] bg-slate-950 border-l border-slate-900 shadow-2xl z-40 overflow-y-auto">
+            <div class="p-6 h-full flex flex-col justify-between">
+                <div>
+                    <!-- Close button -->
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-slate-100">Student Profile</h2>
+                        <button id="closePanelBtn" class="text-slate-400 hover:text-slate-200 p-2 hover:bg-slate-900 rounded-xl transition duration-200">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+                    <!-- Profile detail -->
+                    <div id="studentProfile">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- QR/Barcode Scanner Overlay -->
+    <div id="scannerOverlay" class="scanner-overlay">
+        <div class="scanner-container">
+            <div class="absolute top-4 right-4 z-20">
+                <button id="closeScannerBtn" class="bg-rose-950/80 text-rose-200 border border-rose-900/50 px-4 py-2 rounded-xl hover:bg-rose-900 transition flex items-center space-x-1.5 active:scale-[0.98]">
+                    <i class="fas fa-times"></i> <span>Close Camera</span>
+                </button>
+            </div>
+            <div id="scanner">
+                <div class="scan-frame">
+                    <div class="scan-laser"></div>
+                </div>
+                <canvas id="qrCanvas"></canvas>
+                <div class="status-badge" id="scanStatus">Initializing Camera...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Decode from Image File Modal -->
+    <div id="fileTestModal" class="fixed inset-0 bg-black/75 hidden items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div class="glass-card rounded-2xl p-6 w-full max-w-md shadow-2xl relative border border-slate-800">
+            <button id="closeFileTestBtn" class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 p-2 hover:bg-slate-900 rounded-xl transition">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+            <h3 class="text-xl font-bold text-slate-100 mb-2 flex items-center">
+                <i class="fas fa-image mr-2 text-indigo-400"></i>Decode Barcode/QR
+            </h3>
+            <p class="text-xs text-slate-400 mb-4">Upload a barcode/QR code image to mark student attendance.</p>
+            
+            <input id="fileToTestInput" type="file" accept="image/*" class="w-full text-sm text-slate-300 bg-slate-950/80 border border-slate-900 rounded-xl p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500/80 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-900/40 file:text-indigo-200 hover:file:bg-indigo-900/60">
+            
+            <div class="flex justify-end space-x-3">
+                <button id="decodeMarkBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-xl transition font-medium active:scale-[0.98] shadow-lg shadow-indigo-950/30">
+                    Decode & Mark Present
+                </button>
+            </div>
+            
+            <div id="decodeResult" class="mt-4 text-sm font-medium text-slate-300 min-h-[20px]"></div>
+            
+            <div class="mt-4 text-xs text-slate-400 bg-slate-950/80 p-3 rounded-xl border border-slate-900/80 leading-relaxed">
+                <i class="fas fa-info-circle mr-1 text-cyan-400"></i> Generate a barcode (e.g. <code>STUDENT_566</code>) using the generator tool, save the image, then upload it here to test the system reliably.
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toastHolder" class="fixed top-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

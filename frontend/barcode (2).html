@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Barcode Generator (Code128)</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@4.0.0/dist/JsBarcode.all.min.js"></script>
+  <style>body{font-family:Arial;padding:18px}</style>
+</head>
+<body>
+  <h3>Generate Code128 Barcode</h3>
+  <input id="txt" value="CSE2025_0001" style="width:300px;padding:6px" />
+  <button onclick="gen()">Generate</button>
+  <div style="margin-top:12px">
+    <svg id="barcode"></svg>
+  </div>
+  <div style="margin-top:12px">
+    <button onclick="window.print()">Print Card</button>
+  </div>
+
+  <script>
+    function gen(){
+      const v = document.getElementById('txt').value.trim();
+      if(!v) return alert('Enter barcode text');
+      JsBarcode("#barcode", v, {format: "CODE128", displayValue: true, height:60, width:2});
+    }
+    gen();
+  </script>
+</body>
+</html>

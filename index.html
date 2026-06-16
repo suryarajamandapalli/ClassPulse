@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassPulse | Premium Attendance Intelligence - Secure Login</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: radial-gradient(circle at 10% 20%, rgba(98, 114, 246, 0.9) 0%, rgba(31, 38, 103, 1) 90.1%);
+            overflow-y: auto;
+        }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        .glowing-glow {
+            position: absolute;
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, rgba(99, 102, 241, 0) 70%);
+            filter: blur(40px);
+            z-index: -1;
+            pointer-events: none;
+        }
+        .float-bubble {
+            animation: float 8s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        /* Face ID Scanning Laser */
+        .face-laser {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background-color: #6366f1;
+            box-shadow: 0 0 8px 2px #6366f1;
+            top: 0;
+            animation: face-laser-scan 2s linear infinite;
+            z-index: 10;
+        }
+        @keyframes face-laser-scan {
+            0% { top: 0%; }
+            50% { top: 100%; }
+            100% { top: 0%; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 relative">
+    <!-- Background elements -->
+    <div class="glowing-glow top-1/4 left-1/4 animate-pulse" style="animation-duration: 4s;"></div>
+    <div class="glowing-glow bottom-1/4 right-1/4 animate-pulse" style="animation-duration: 6s;"></div>
+    
+    <div class="glass-card rounded-2xl p-8 w-full max-w-md relative z-10 transition-transform duration-300 hover:scale-[1.01] float-bubble">
+        <div class="text-center mb-6">
+            <div class="bg-gradient-to-tr from-indigo-500 to-cyan-400 w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-indigo-500/30 transform hover:scale-105 transition-transform duration-300 cursor-pointer">
+                <i class="fas fa-graduation-cap text-white text-2xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-200 via-slate-100 to-cyan-200 bg-clip-text text-transparent mb-0.5">ClassPulse</h1>
+            <p id="subTitleText" class="text-slate-400 text-xs">Next-Gen Attendance Intelligence</p>
+        </div>
+
+        <!-- 1. FACE ID ONBOARDING VIEW (Shown if not registered) -->
+        <div id="onboardingView" class="hidden space-y-4">
+            <div class="bg-indigo-950/30 border border-indigo-900/40 p-4 rounded-2xl text-center">
+                <h3 class="text-sm font-bold text-indigo-300 mb-1"><i class="fas fa-user-plus mr-1.5"></i>Face ID Onboarding</h3>
+                <p class="text-xs text-slate-400 leading-relaxed">Please register your face and fill details to set up the system.</p>
+            </div>
+            
+            <form id="onboardingForm" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Full Name</label>
+                    <input type="text" id="onboardName" required class="w-full bg-slate-900/60 border border-slate-700/60 text-slate-100 px-3 py-2 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Surya Raja M">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">PIN / Roll Number</label>
+                    <input type="text" id="onboardRoll" required class="w-full bg-slate-900/60 border border-slate-700/60 text-slate-100 px-3 py-2 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. 24T91A05B6">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Branch</label>
+                        <select id="onboardBranch" class="w-full bg-slate-900/60 border border-slate-700/60 text-slate-300 px-3 py-2 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="CSE">CSE</option>
+                            <option value="ECE">ECE</option>
+                            <option value="EEE">EEE</option>
+                            <option value="MECH">MECH</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Mobile Number</label>
+                        <input type="tel" id="onboardPhone" class="w-full bg-slate-900/60 border border-slate-700/60 text-slate-100 px-3 py-2 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. +91 9876543210">
+                    </div>
+                </div>
+                
+                <!-- Camera Register Preview Box -->
+                <div class="relative w-full aspect-video bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center">
+                    <video id="onboardVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+                    <canvas id="onboardCanvas" class="hidden"></canvas>
+                    <div class="absolute inset-0 border border-indigo-500/20 rounded-xl pointer-events-none"></div>
+                </div>
+
+                <button type="submit" id="registerFaceBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-xl transition duration-200 font-semibold active:scale-[0.99] flex items-center justify-center space-x-2">
+                    <i class="fas fa-camera"></i>
+                    <span>Capture & Register Face</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- 2. FACE ID UNLOCK VIEW (Shown if registered) -->
+        <div id="faceUnlockView" class="hidden space-y-6">
+            <div class="text-center text-slate-300">
+                <p class="text-sm">Hi <span id="unlockUserName" class="text-indigo-400 font-bold">Student</span>,</p>
+                <p class="text-xs text-slate-400 mt-0.5">Place your face in the camera to auto-login.</p>
+            </div>
+
+            <!-- Face Scanner Camera Box -->
+            <div class="relative w-56 h-56 mx-auto bg-slate-950 rounded-full overflow-hidden border-2 border-indigo-500/30 flex items-center justify-center">
+                <div class="face-laser"></div>
+                <video id="unlockVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+                <canvas id="unlockCanvas" class="hidden"></canvas>
+            </div>
+            
+            <div class="text-center">
+                <p id="unlockStatus" class="text-xs text-slate-400 font-semibold"><i class="fas fa-spinner animate-spin mr-1.5 text-indigo-400"></i>Scanning Face...</p>
+            </div>
+
+            <div class="flex flex-col space-y-2">
+                <button id="passwordFallbackBtn" class="w-full bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-slate-300 py-2.5 rounded-xl transition font-medium text-xs active:scale-[0.99]">
+                    <i class="fas fa-key mr-1.5 text-slate-400"></i>Login with Username/Password
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. USERNAME/PASSWORD FORM (Hidden by default, fallback) -->
+        <div id="passwordLoginView" class="hidden space-y-6">
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-slate-300 mb-2">Username</label>
+                    <div class="relative">
+                        <input type="text" id="username" name="username" required 
+                               class="w-full bg-slate-900/60 border border-slate-700/60 text-slate-100 pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/80 focus:border-indigo-500 transition duration-200" 
+                               placeholder="Enter username">
+                        <i class="fas fa-user absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="password" class="block text-sm font-medium text-slate-300 mb-2">Password</label>
+                    <div class="relative">
+                        <input type="password" id="password" name="password" required 
+                               class="w-full bg-slate-900/60 border border-slate-700/60 text-slate-100 pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/80 focus:border-indigo-500 transition duration-200" 
+                               placeholder="Enter password">
+                        <i class="fas fa-lock absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
+                    </div>
+                </div>
+                
+                <div class="bg-indigo-950/40 border border-indigo-900/50 p-3.5 rounded-xl">
+                    <div class="flex items-start space-x-2 text-xs text-indigo-200">
+                        <i class="fas fa-key mt-0.5 text-indigo-400"></i>
+                        <div>
+                            <span class="font-semibold text-indigo-300">Credentials:</span><br>
+                            Username: <code class="bg-indigo-900/50 px-1 py-0.5 rounded text-indigo-100 font-mono">admin</code> &nbsp; 
+                            Password: <code class="bg-indigo-900/50 px-1 py-0.5 rounded text-indigo-100 font-mono">1234</code>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex space-x-2">
+                    <button id="backToFaceBtn" type="button" class="w-12 bg-slate-900 border border-slate-800 text-slate-300 rounded-xl hover:bg-slate-800 transition flex items-center justify-center active:scale-[0.99]" title="Back to Face ID">
+                        <i class="fas fa-camera text-base"></i>
+                    </button>
+                    <button type="submit" 
+                            class="flex-1 bg-indigo-600 text-white py-3 px-4 rounded-xl hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-500/20 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200 font-semibold">
+                        Sign In
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="mt-6 text-center text-xs text-slate-500">
+            &copy; 2026 ClassPulse. All rights reserved.
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toastHolder" class="fixed top-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        let audioCtx = null;
+        let webcamStream = null;
+        let verifyTimer = null;
+        let isFaceModeActive = false;
+
+        // Load page
+        document.addEventListener("DOMContentLoaded", function() {
+            // Check if already logged in
+            if (localStorage.getItem('isLoggedIn') === 'true') {
+                window.location.href = 'dashboard.html';
+                return;
+            }
+            
+            checkFaceRegistration();
+            setupEvents();
+        });
+
+        // Initialize Audio context for beeps
+        function initAudio() {
+            if (!audioCtx) {
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                } catch(e) {}
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playBeepSuccess() {
+            initAudio();
+            if (!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.type = 'sine'; osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                osc.start();
+                setTimeout(() => { osc.frequency.setValueAtTime(1320, audioCtx.currentTime); }, 80);
+                osc.stop(audioCtx.currentTime + 0.22);
+            } catch(e) {}
+        }
+
+        function playBeepError() {
+            initAudio();
+            if (!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.18);
+            } catch(e) {}
+        }
+
+        // Show Toast Notification
+        function showToast(message, type = 'info') {
+            const holder = document.getElementById('toastHolder');
+            if (!holder) return;
+
+            const toast = document.createElement('div');
+            toast.className = 'px-4 py-2.5 rounded-xl shadow-2xl text-slate-100 flex items-center space-x-2 border text-xs pointer-events-auto transform translate-x-full transition-transform duration-300 ease-out min-w-[200px]';
+            
+            let bg = 'bg-slate-900/95';
+            let border = 'border-sky-500/30';
+            let icon = '<i class="fas fa-info-circle text-sky-400 text-sm"></i>';
+
+            if (type === 'success') {
+                border = 'border-emerald-500/30';
+                icon = '<i class="fas fa-check-circle text-emerald-400 text-sm"></i>';
+            } else if (type === 'error') {
+                border = 'border-rose-500/30';
+                icon = '<i class="fas fa-exclamation-circle text-rose-400 text-sm"></i>';
+            }
+
+            toast.classList.add(bg, border);
+            toast.innerHTML = `${icon} <span class="font-medium">${message}</span>`;
+            holder.appendChild(toast);
+            
+            setTimeout(() => { toast.classList.remove('translate-x-full'); }, 50);
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => { toast.remove(); }, 300);
+            }, 3000);
+        }
+
+        // Check Face registration API
+        async function checkFaceRegistration() {
+            try {
+                const response = await fetch('/api/face/config');
+                const data = await response.json();
+                
+                if (data.registered) {
+                    // Start face ID unlock
+                    showView('faceUnlock');
+                    document.getElementById('unlockUserName').textContent = data.student.name;
+                    startCamera('unlockVideo');
+                    startFaceVerificationLoop();
+                } else {
+                    // Go to onboarding registration
+                    showView('onboarding');
+                    startCamera('onboardVideo');
+                }
+            } catch (error) {
+                console.error("Error checking face ID status:", error);
+                // Fallback to standard login on connection issues
+                showView('passwordLogin');
+            }
+        }
+
+        function showView(view) {
+            // Stop active camera
+            stopCamera();
+            if (verifyTimer) { clearInterval(verifyTimer); verifyTimer = null; }
+
+            document.getElementById('onboardingView').classList.add('hidden');
+            document.getElementById('faceUnlockView').classList.add('hidden');
+            document.getElementById('passwordLoginView').classList.add('hidden');
+
+            const subtitleText = document.getElementById('subTitleText');
+
+            if (view === 'onboarding') {
+                document.getElementById('onboardingView').classList.remove('hidden');
+                subtitleText.textContent = "Welcome! Register Face ID to Start";
+            } else if (view === 'faceUnlock') {
+                document.getElementById('faceUnlockView').classList.remove('hidden');
+                subtitleText.textContent = "Secure Face ID Verification";
+            } else if (view === 'passwordLogin') {
+                document.getElementById('passwordLoginView').classList.remove('hidden');
+                subtitleText.textContent = "Traditional Security Bypass";
+            }
+        }
+
+        // Camera Management
+        async function startCamera(videoElId) {
+            const video = document.getElementById(videoElId);
+            if (!video) return;
+            
+            try {
+                webcamStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 320, height: 240, facingMode: "user" },
+                    audio: false
+                });
+                video.srcObject = webcamStream;
+            } catch (error) {
+                console.error("Failed to start camera:", error);
+                showToast("Camera access denied or unavailable", "error");
+            }
+        }
+
+        function stopCamera() {
+            if (webcamStream) {
+                try {
+                    webcamStream.getTracks().forEach(track => track.stop());
+                } catch(e) {}
+                webcamStream = null;
+            }
+        }
+
+        // Face Verification Loop
+        function startFaceVerificationLoop() {
+            isFaceModeActive = true;
+            const video = document.getElementById('unlockVideo');
+            const canvas = document.getElementById('unlockCanvas');
+            const ctx = canvas.getContext('2d');
+            const statusText = document.getElementById('unlockStatus');
+
+            verifyTimer = setInterval(async () => {
+                if (!isFaceModeActive || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+                
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Get Base64 image
+                const base64Img = canvas.toDataURL('image/jpeg', 0.85);
+                
+                try {
+                    const response = await fetch('/api/face/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ image_base64: base64Img })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.status === 'ok') {
+                        if (data.match) {
+                            // Match! Log in automatically
+                            isFaceModeActive = false;
+                            clearInterval(verifyTimer);
+                            playBeepSuccess();
+                            showToast("Face ID Verified! Logging in...", "success");
+                            statusText.innerHTML = '<span class="text-emerald-400 font-bold"><i class="fas fa-check-circle mr-1"></i>Unlocked via Face ID</span>';
+                            
+                            localStorage.setItem('isLoggedIn', 'true');
+                            localStorage.setItem('username', data.name);
+                            
+                            setTimeout(() => {
+                                stopCamera();
+                                window.location.href = 'dashboard.html';
+                            }, 800);
+                        } else {
+                            statusText.innerHTML = '<span class="text-slate-400"><i class="fas fa-spinner animate-spin mr-1"></i>Scanning Face... (No match)</span>';
+                        }
+                    } else if (data.status === 'no_face') {
+                        statusText.innerHTML = '<span class="text-slate-500"><i class="fas fa-exclamation-circle mr-1"></i>No face detected in frame</span>';
+                    }
+                } catch (e) {
+                    console.error("Verification network error:", e);
+                }
+            }, 800);
+        }
+
+        // Setup Page Events
+        function setupEvents() {
+            // Onboarding Face Registration Submit
+            document.getElementById('onboardingForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const registerBtn = document.getElementById('registerFaceBtn');
+                registerBtn.disabled = true;
+                registerBtn.innerHTML = '<i class="fas fa-spinner animate-spin"></i><span>Registering Face ID...</span>';
+
+                const video = document.getElementById('onboardVideo');
+                const canvas = document.getElementById('onboardCanvas');
+                const ctx = canvas.getContext('2d');
+                
+                if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+                    showToast("Camera is initializing. Please wait...", "error");
+                    registerBtn.disabled = false;
+                    registerBtn.innerHTML = '<i class="fas fa-camera"></i><span>Capture & Register Face</span>';
+                    return;
+                }
+                
+                // Grab picture
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const base64Img = canvas.toDataURL('image/jpeg', 0.85);
+
+                const details = {
+                    name: document.getElementById('onboardName').value.trim(),
+                    roll_no: document.getElementById('onboardRoll').value.trim().toUpperCase(),
+                    branch: document.getElementById('onboardBranch').value,
+                    phone: document.getElementById('onboardPhone').value.trim(),
+                    image_base64: base64Img
+                };
+
+                try {
+                    const response = await fetch('/api/face/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(details)
+                    });
+                    const data = await response.json();
+                    
+                    if (response.ok && data.status === 'ok') {
+                        playBeepSuccess();
+                        showToast("Onboarding Successful!", "success");
+                        
+                        localStorage.setItem('isLoggedIn', 'true');
+                        localStorage.setItem('username', details.name);
+                        
+                        setTimeout(() => {
+                            stopCamera();
+                            window.location.href = 'dashboard.html';
+                        }, 1000);
+                    } else {
+                        playBeepError();
+                        showToast(data.message || "Face registration failed", "error");
+                        registerBtn.disabled = false;
+                        registerBtn.innerHTML = '<i class="fas fa-camera"></i><span>Capture & Register Face</span>';
+                    }
+                } catch (error) {
+                    console.error("Registration failed:", error);
+                    playBeepError();
+                    showToast("Server connection error during face setup", "error");
+                    registerBtn.disabled = false;
+                    registerBtn.innerHTML = '<i class="fas fa-camera"></i><span>Capture & Register Face</span>';
+                }
+            });
+
+            // Fallback button to manual password
+            document.getElementById('passwordFallbackBtn').addEventListener('click', function() {
+                showView('passwordLogin');
+            });
+
+            // Back to Face ID scan button
+            document.getElementById('backToFaceBtn').addEventListener('click', function() {
+                checkFaceRegistration();
+            });
+
+            // Standard Username/Password Login submit
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value.trim();
+                
+                if (username === 'admin' && password === '1234') {
+                    playBeepSuccess();
+                    localStorage.setItem('isLoggedIn', 'true');
+                    localStorage.setItem('username', 'Admin');
+                    stopCamera();
+                    window.location.href = 'dashboard.html';
+                } else {
+                    playBeepError();
+                    alert('Invalid credentials! Use admin / 1234');
+                }
+            });
+
+            // Unlock audio context on user interaction
+            document.body.addEventListener('click', () => {
+                initAudio();
+            }, { once: true });
+        }
+    </script>
+</body>
+</html>

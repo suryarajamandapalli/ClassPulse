@@ -1,0 +1,5 @@
+student_id,name,roll_no,branch,year,barcode_value
+S001,Anil Kumar,21CSE001,CSE,2,CSE2025_0001
+S002,Siri Reddy,21CSE002,CSE,2,CSE2025_0002
+S003,Raja M,21CSE003,CSE,2,CSE2025_0003
+...

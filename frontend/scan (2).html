@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Scan — Mark Attendance</title>
+<style>body{font-family:Arial;padding:12px} #video{width:420px;height:240px;border:1px solid #ccc;display:flex;align-items:center;justify-content:center}</style>
+</head>
+<body>
+  <h2>Scan to Mark Attendance</h2>
+  <div id="video">Camera preview</div>
+  <button id="start">Start</button>
+  <button id="stop">Stop</button>
+  <div style="margin-top:8px">
+    Class ID: <input id="classId" value="1" style="width:60px" />
+  </div>
+  <div style="margin-top:8px">Detected: <b id="det">—</b></div>
+  <div style="margin-top:8px">Server: <b id="srv">—</b></div>
+
+  <script src="https://unpkg.com/@ericblade/quagga2@1.2.6/dist/quagga.min.js"></script>
+  <script>
+    const base = 'http://localhost:5000';
+    const detEl = document.getElementById('det');
+    const srvEl = document.getElementById('srv');
+
+    document.getElementById('start').onclick = ()=>startScan();
+    document.getElementById('stop').onclick = ()=>{ try{ Quagga.stop(); }catch(e){} }
+
+    function startScan(){
+      try{ Quagga.stop(); }catch(e){}
+      Quagga.init({
+        inputStream:{ name:"Live", type:"LiveStream", target:document.querySelector('#video'), constraints:{facingMode:"environment"} },
+        decoder:{ readers:["code_128_reader","ean_reader","code_39_reader"] },
+        locate:true
+      }, function(err){
+        if(err){ alert('Camera init error '+err); return; }
+        Quagga.start();
+      });
+      Quagga.onDetected(async (data)=>{
+        const code = data.codeResult && data.codeResult.code ? data.codeResult.code : '';
+        if(!code) return;
+        detEl.textContent = code;
+        // post to backend
+        const classId = parseInt(document.getElementById('classId').value || 1);
+        try{
+          const resp = await fetch(base + '/api/attendance/scan', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ barcode: code, class_id: classId }) });
+          const j = await resp.json();
+          srvEl.textContent = j.message || JSON.stringify(j);
+        }catch(e){
+          srvEl.textContent = 'Server error';
+        }
+        Quagga.pause();
+        setTimeout(()=>{ try{ Quagga.start(); }catch(e){} }, 1200);
+      });
+    }
+  </script>
+</body>
+</html>
+
+
+<style>
+  body{
+    font-family: Century Gothic;
+    padding: 12px;
+    padding-left: 500px;
+  }
+</style>

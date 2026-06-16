@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Student Attendance Tracker - Login</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md">
+    <div class="text-center mb-8">
+      <div class="bg-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fas fa-graduation-cap text-white text-2xl"></i>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-800 mb-2">Student Attendance Tracker</h1>
+      <p class="text-gray-600">Sign in to access the dashboard</p>
+    </div>
+
+    <form id="loginForm" class="space-y-6">
+      <div>
+        <label for="username" class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+        <div class="relative">
+          <input type="text" id="username" name="username" required
+                 class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                 placeholder="Enter your username" />
+          <i class="fas fa-user absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+        </div>
+      </div>
+
+      <div>
+        <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+        <div class="relative">
+          <input type="password" id="password" name="password" required
+                 class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                 placeholder="Enter your password" />
+          <i class="fas fa-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+        </div>
+      </div>
+
+      <div class="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+        <strong>Demo Credentials:</strong><br/>
+        Username: <code>admin</code> &nbsp; Password: <code>password</code>
+      </div>
+
+      <button type="submit"
+              class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 font-medium">
+        Sign In
+      </button>
+    </form>
+
+    <div class="mt-6 text-center text-sm text-gray-500">
+      <i class="fas fa-info-circle mr-1"></i> Demo version - Use provided credentials
+    </div>
+  </div>
+
+<script>
+  // If already logged in, go to dashboard
+  if (localStorage.getItem('isLoggedIn') === 'true') {
+    window.location.href = 'dashboard.html';
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+
+    if (username === 'admin' && password === 'password') {
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('username', username);
+      window.location.href = 'dashboard.html';
+    } else {
+      alert('Invalid credentials!\nUse:\nUsername: admin\nPassword: password');
+    }
+  });
+</script>
+</body>
+</html>

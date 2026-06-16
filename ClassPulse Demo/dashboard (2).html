@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Attendance Demo — FINAL</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+
+<!-- Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+<style>
+  body{font-family:'Inter',system-ui,Segoe UI,Roboto,Arial;background:#f3f4f6;margin:0}
+  .login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2);z-index:80}
+  .card{background:white;border-radius:12px;padding:22px;box-shadow:0 12px 30px rgba(0,0,0,0.12)}
+  header{background:#fff;box-shadow:0 1px 0 rgba(0,0,0,0.05);padding:14px 18px}
+  .scanner-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:70;display:none;align-items:center;justify-content:center}
+  .scanner-card{width:94%;max-width:900px;height:520px;background:#0b1220;border-radius:12px;overflow:hidden;position:relative;padding:12px;box-sizing:border-box}
+  #scanner video{width:100%;height:100%;object-fit:contain;border-radius:8px;background:#000;display:block}
+  canvas{display:none}
+  .scan-frame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:60%;height:46%;border:2px dashed rgba(255,255,255,0.12);border-radius:8px;pointer-events:none}
+  .status-badge{position:absolute;left:14px;bottom:14px;background:rgba(0,0,0,0.6);color:#fff;padding:8px 12px;border-radius:8px;font-size:14px}
+  .avatar{width:44px;height:44px;border-radius:8px;object-fit:cover}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;background:rgba(0,0,0,0.8);color:#fff;padding:10px 14px;border-radius:10px;z-index:120}
+  /* responsive */
+  @media (max-width:640px){ .scanner-card{height:360px} .avatar{width:36px;height:36px} }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen" class="login-screen">
+  <div class="card w-full max-w-md">
+    <div class="text-center mb-4">
+      <div class="bg-blue-600 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3">
+        <i class="fas fa-graduation-cap text-white text-xl"></i>
+      </div>
+      <h2 class="text-xl font-semibold">Attendance Demo — Login</h2>
+      <p class="text-sm text-gray-500">Use demo credentials</p>
+    </div>
+
+    <form id="loginForm" class="space-y-4">
+      <div><label class="text-sm text-gray-700">Username</label><input id="username" class="w-full px-3 py-2 border rounded" placeholder="admin" required></div>
+      <div><label class="text-sm text-gray-700">Password</label><input id="password" type="password" class="w-full px-3 py-2 border rounded" placeholder="password" required></div>
+      <div class="text-sm text-gray-600 bg-blue-50 p-3 rounded">Demo: <strong>admin</strong> / <strong>password</strong></div>
+      <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded">Sign in</button>
+    </form>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="max-w-6xl mx-auto flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-blue-600 rounded-md text-white flex items-center justify-center"><i class="fas fa-graduation-cap"></i></div>
+      <div><div class="text-lg font-semibold">Attendance Dashboard — Demo</div><div class="text-xs text-gray-500">Teacher View (demo)</div></div>
+    </div>
+    <div class="flex items-center gap-3">
+      <button id="scanBtn" class="bg-green-600 text-white px-3 py-2 rounded flex items-center gap-2"><i class="fas fa-barcode"></i> Scan</button>
+      <button id="openTestImage" class="bg-indigo-600 text-white px-3 py-2 rounded flex items-center gap-2"><i class="fas fa-image"></i> Test Image</button>
+      <button id="logoutBtn" class="bg-red-600 text-white px-3 py-2 rounded flex items-center gap-2"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="max-w-6xl mx-auto mt-6 px-6 pb-12">
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+    <div class="bg-white p-4 rounded shadow text-center"><i class="fas fa-users text-blue-600 mb-1"></i><div id="totalStudents" class="text-2xl font-bold">0</div><div class="text-sm text-gray-600">Total</div></div>
+    <div class="bg-white p-4 rounded shadow text-center"><i class="fas fa-user-check text-green-600 mb-1"></i><div id="presentToday" class="text-2xl font-bold">0</div><div class="text-sm text-gray-600">Present (>=75%)</div></div>
+    <div class="bg-white p-4 rounded shadow text-center"><i class="fas fa-user-times text-red-600 mb-1"></i><div id="absentToday" class="text-2xl font-bold">0</div><div class="text-sm text-gray-600">Below 75%</div></div>
+    <div class="bg-white p-4 rounded shadow text-center"><i class="fas fa-chart-line text-purple-600 mb-1"></i><div id="avgAttendance" class="text-2xl font-bold">0%</div><div class="text-sm text-gray-600">Average</div></div>
+  </div>
+
+  <div class="bg-white rounded shadow p-4 mb-6">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-semibold">Students</h3>
+      <div class="flex items-center gap-3">
+        <input id="searchInput" placeholder="Search..." class="px-3 py-2 border rounded" />
+        <select id="branchFilter" class="px-3 py-2 border rounded"><option value="">All</option><option value="CSE">CSE</option><option value="ECE">ECE</option><option value="MECH">MECH</option></select>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full"><thead class="text-sm text-gray-600 border-b"><tr><th class="p-3">Student</th><th>PIN</th><th>Branch</th><th>Attendance</th><th>Actions</th></tr></thead><tbody id="studentTableBody"></tbody></table>
+    </div>
+  </div>
+
+  <div class="bg-white rounded shadow p-4"><h3 class="font-semibold mb-3">Attendance Chart</h3><div style="height:360px"><canvas id="attendanceChart"></canvas></div></div>
+</main>
+
+<!-- Profile panel -->
+<aside id="sidePanel" class="slide-panel fixed right-0 top-0 h-full w-96 bg-white shadow z-50 overflow-y-auto">
+  <div class="p-6"><div class="flex justify-between items-center mb-4"><h3 class="text-lg font-semibold">Student Profile</h3><button id="closePanelBtn"><i class="fas fa-times text-gray-600"></i></button></div><div id="studentProfile"></div></div>
+</aside>
+
+<!-- Scanner overlay (optional camera scanning) -->
+<div id="scannerOverlay" class="scanner-overlay" aria-hidden="true">
+  <div class="scanner-card">
+    <div style="position:absolute;right:14px;top:14px;z-index:20"><button id="closeScannerBtn" class="bg-red-600 text-white px-3 py-1 rounded">Close</button></div>
+    <div id="scanner" style="position:relative;height:100%"><div class="scan-frame"></div><canvas id="qrCanvas"></canvas><div class="status-badge" id="scanStatus">Initializing...</div></div>
+  </div>
+</div>
+
+<!-- Test image modal -->
+<div id="fileTestModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-60">
+  <div class="card w-full max-w-md">
+    <div class="flex justify-between items-center mb-3"><h4 class="font-semibold">Decode & Mark from Image</h4><button id="closeFileTest" class="text-gray-600"><i class="fas fa-times"></i></button></div>
+    <input id="fileToTest" type="file" accept="image/*" class="mb-3" />
+    <div class="flex justify-end gap-3"><button id="decodeMarkBtn" class="bg-blue-600 text-white px-3 py-2 rounded">Decode & Mark</button></div>
+    <div id="decodeResult" class="mt-3 text-sm text-gray-700"></div>
+    <div class="mt-3 text-xs text-gray-500">Tip: This is the reliable demo flow. Use this if the camera is being flaky.</div>
+  </div>
+</div>
+
+<div id="toastHolder"></div>
+
+<script>
+/* ---------------- Demo data + persistence ---------------- */
+const STORAGE_KEY = 'attendance_demo_final_v1';
+const DEFAULT_TOTAL = 40;
+const defaultStudents = {
+  '24T91A0566': { pin:'24T91A0566', name:'M. Surya Raja', branch:'CSE', section:'A', classesAttended:28, totalClasses:DEFAULT_TOTAL, photo:'https://picsum.photos/seed/raja/200/200' },
+  '24T91A0321': { pin:'24T91A0321', name:'Akhil Kumar', branch:'ECE', section:'B', classesAttended:20, totalClasses:DEFAULT_TOTAL, photo:'https://picsum.photos/seed/akhil/200/200' },
+  '24T91A0789': { pin:'24T91A0789', name:'Priya Sharma', branch:'MECH', section:'C', classesAttended:36, totalClasses:DEFAULT_TOTAL, photo:'https://picsum.photos/seed/priya/200/200' }
+};
+let students = {};
+function loadState(){ const raw = localStorage.getItem(STORAGE_KEY); students = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(defaultStudents)); }
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(students)); }
+function percent(s){ return Math.round((s.classesAttended / s.totalClasses) * 100); }
+
+/* ---------------- UI rendering ---------------- */
+let chart = null;
+function renderStats(){
+  const total = Object.keys(students).length;
+  const avg = Math.round(Object.values(students).reduce((a,s)=>a+percent(s),0)/Math.max(1,total));
+  const present = Object.values(students).filter(s=>percent(s)>=75).length;
+  document.getElementById('totalStudents').textContent = total;
+  document.getElementById('presentToday').textContent = present;
+  document.getElementById('absentToday').textContent = total - present;
+  document.getElementById('avgAttendance').textContent = avg + '%';
+}
+function renderTable(filter='', branch=''){
+  const tbody = document.getElementById('studentTableBody'); tbody.innerHTML='';
+  const list = Object.values(students).filter(s=>{
+    const txt = (s.name + ' ' + s.pin + ' ' + s.branch + ' ' + s.section).toLowerCase();
+    if (filter && !txt.includes(filter.toLowerCase())) return false;
+    if (branch && s.branch !== branch) return false;
+    return true;
+  });
+  list.forEach(s=>{
+    const tr = document.createElement('tr'); tr.className = 'hover:bg-gray-50';
+    tr.innerHTML = `
+      <td class="p-3 flex items-center gap-3">
+        <img src="${s.photo}" class="avatar" alt="avatar" />
+        <div><div class="font-medium">${s.name}</div><div class="text-xs text-gray-500">${s.branch} • Section ${s.section}</div></div>
+      </td>
+      <td class="p-3 font-mono">${s.pin}</td>
+      <td class="p-3">${s.branch}</td>
+      <td class="p-3">${percent(s)}% (${s.classesAttended}/${s.totalClasses})</td>
+      <td class="p-3">
+        <button data-pin="${s.pin}" class="mark-btn bg-green-600 text-white px-3 py-1 rounded mr-2"><i class="fas fa-check"></i></button>
+        <button data-pin="${s.pin}" class="profile-btn text-gray-600"><i class="fas fa-user"></i></button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  document.querySelectorAll('.mark-btn').forEach(b=>b.onclick = e=> markPresent(e.currentTarget.dataset.pin));
+  document.querySelectorAll('.profile-btn').forEach(b=>b.onclick = e=> openProfile(e.currentTarget.dataset.pin));
+}
+function renderChart(){
+  const ctx = document.getElementById('attendanceChart').getContext('2d');
+  const labels = Object.values(students).map(s => s.name);
+  const data = Object.values(students).map(s => percent(s));
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, { type:'bar', data:{ labels, datasets:[{ label:'Attendance %', data, backgroundColor:'rgba(59,130,246,0.9)' }] }, options:{ maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, max:100 } } } });
+}
+function refreshUI(){ renderTable(document.getElementById('searchInput').value, document.getElementById('branchFilter').value); renderChart(); renderStats(); }
+
+/* ---------------- Profile + AI-ish ---------------- */
+const sidePanel = document.getElementById('sidePanel');
+document.getElementById('closePanelBtn').onclick = ()=> sidePanel.classList.remove('open');
+function generateAIReport(s){
+  const p = percent(s);
+  const modules = ['M1','ADS','OS','DBMS','OOP'];
+  const absent = [];
+  if(p < 60) absent.push(modules[0], modules[1]);
+  else if(p < 80) absent.push(modules[0]);
+  const verdict = p >= 80 ? 'regular and consistent' : (p >= 60 ? 'mostly regular' : 'irregular and needs attention');
+  const extra = absent.length ? `, often absent in ${absent.join(', ')}` : '';
+  return `${s.name} is ${verdict}${extra}. Current attendance: ${p}%.`;
+}
+function openProfile(pin){
+  const s = students[pin]; if(!s) return;
+  const c = document.getElementById('studentProfile');
+  c.innerHTML = `
+    <div class="text-center mb-4">
+      <img src="${s.photo}" class="w-28 h-28 rounded-md mx-auto object-cover mb-2"/>
+      <h3 class="font-semibold">${s.name}</h3>
+      <div class="text-sm text-gray-500">${s.branch} • Section ${s.section}</div>
+    </div>
+    <div class="space-y-3">
+      <div class="p-3 bg-gray-50 rounded"><strong>PIN</strong><div class="font-mono">${s.pin}</div></div>
+      <div class="p-3 bg-gray-50 rounded"><strong>Attendance</strong><div>${percent(s)}% (${s.classesAttended}/${s.totalClasses})</div></div>
+      <div class="p-3 bg-blue-50 rounded"><strong>AI Report</strong><div class="text-sm text-gray-700 mt-2">${generateAIReport(s)}</div></div>
+    </div>
+    <div class="mt-4 flex gap-3">
+      <button id="manualMark" class="bg-green-600 text-white px-4 py-2 rounded">Mark Present</button>
+      <button id="resetBtn" class="bg-yellow-500 text-white px-4 py-2 rounded">Reset</button>
+    </div>`;
+  document.getElementById('manualMark').onclick = ()=>{ s.classesAttended = Math.min(s.totalClasses, s.classesAttended + 1); saveState(); refreshUI(); openProfile(pin); showToast(`${s.name} marked present`); };
+  document.getElementById('resetBtn').onclick = ()=>{ if(confirm('Reset attendance for ' + s.name + '?')){ s.classesAttended=0; saveState(); refreshUI(); openProfile(pin); } };
+  sidePanel.classList.add('open');
+}
+
+/* ---------------- Helpers ---------------- */
+function markPresent(pin){
+  if(!students[pin]) return;
+  students[pin].classesAttended = Math.min(students[pin].totalClasses, students[pin].classesAttended + 1);
+  saveState(); refreshUI(); showToast(`${students[pin].name} marked present`);
+}
+document.getElementById('searchInput').addEventListener('input', e => renderTable(e.target.value, document.getElementById('branchFilter').value));
+document.getElementById('branchFilter').addEventListener('change', e => renderTable(document.getElementById('searchInput').value, e.target.value));
+function showToast(msg, ms=1500){ const d=document.createElement('div'); d.className='toast'; d.textContent=msg; document.getElementById('toastHolder').appendChild(d); setTimeout(()=>d.style.opacity=0, ms-300); setTimeout(()=>d.remove(), ms); }
+
+/* -------------- Audio (unlock + beep) -------------- */
+let _audioCtx = null;
+function ensureAudioCtx(){ if(!_audioCtx){ try{ _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ _audioCtx = null; } } if(_audioCtx && _audioCtx.state==='suspended') _audioCtx.resume().catch(()=>{}); return _audioCtx; }
+function playSuccess(){ const ctx=ensureAudioCtx(); if(!ctx) return; try{ const o=ctx.createOscillator(), g=ctx.createGain(); o.type='sine'; o.frequency.value=880; g.gain.value=0.07; o.connect(g); g.connect(ctx.destination); o.start(); setTimeout(()=>{ o.frequency.value=1320; g.gain.value=0.03; },80); setTimeout(()=>o.stop(),200);}catch(e){} }
+function playError(){ const ctx=ensureAudioCtx(); if(!ctx) return; try{ const o=ctx.createOscillator(), g=ctx.createGain(); o.type='sawtooth'; o.frequency.value=260; g.gain.value=0.08; o.connect(g); g.connect(ctx.destination); o.start(); setTimeout(()=>o.stop(),160);}catch(e){} }
+
+/* -------------- Scanner (defensive single-video) -------------- */
+const scannerOverlay = document.getElementById('scannerOverlay');
+const scannerDiv = document.getElementById('scanner');
+let qrCanvas = document.getElementById('qrCanvas');
+let qrCtx = qrCanvas.getContext('2d');
+const scanStatus = document.getElementById('scanStatus');
+
+let desiredPin = null;
+let mediaStream = null;
+let scanningActive = false;
+let jsqrTimer = null;
+let quaggaFrameTimer = null;
+
+document.getElementById('scanBtn').addEventListener('click', ()=> { ensureAudioCtx(); openScannerForPin(null); });
+document.getElementById('closeScannerBtn').addEventListener('click', closeScanner);
+document.getElementById('openTestImage').addEventListener('click', ()=> document.getElementById('fileTestModal').classList.toggle('hidden'));
+document.getElementById('logoutBtn').addEventListener('click', ()=> { if(confirm('Logout demo?')){ localStorage.removeItem('isLoggedIn'); location.reload(); } });
+
+function resetScannerDOM(){
+  scannerDiv.innerHTML = '';
+  const frame = document.createElement('div'); frame.className='scan-frame';
+  const canvas = document.createElement('canvas'); canvas.id='qrCanvas';
+  const status = document.createElement('div'); status.className='status-badge'; status.id='scanStatus'; status.textContent='Initializing...';
+  scannerDiv.appendChild(frame); scannerDiv.appendChild(canvas); scannerDiv.appendChild(status);
+  qrCanvas = canvas; qrCtx = qrCanvas.getContext('2d');
+}
+function removeExistingVideos(){ const vids = scannerDiv.querySelectorAll('video'); vids.forEach(v=>{ try{ v.pause(); v.srcObject=null; }catch(e){} v.remove(); }); }
+
+async function openScannerForPin(pin){
+  desiredPin = pin;
+  resetScannerDOM();
+  scannerOverlay.style.display='flex';
+  scanStatus.textContent='Requesting camera — allow permission';
+  try{
+    stopScanning();
+    mediaStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' }, audio:false });
+    removeExistingVideos();
+    const videoEl = document.createElement('video');
+    videoEl.id='scannerVideo'; videoEl.setAttribute('playsinline',''); videoEl.style.width='100%'; videoEl.style.height='100%'; videoEl.style.objectFit='contain';
+    const canvas = scannerDiv.querySelector('#qrCanvas');
+    scannerDiv.insertBefore(videoEl, canvas);
+    videoEl.srcObject = mediaStream;
+    await videoEl.play();
+    scanStatus.textContent='Camera ready — scanning...';
+    startScanning(videoEl, canvas, qrCtx);
+  }catch(err){
+    console.error('Camera error', err);
+    scanStatus.textContent='Camera error: ' + (err.message || err);
+    showToast('Camera failed or permission denied — use Test Image.');
+  }
+}
+function closeScanner(){ stopScanning(); scannerOverlay.style.display='none'; }
+function stopScanning(){ scanningActive=false; if(jsqrTimer){ clearTimeout(jsqrTimer); jsqrTimer=null; } if(quaggaFrameTimer){ clearTimeout(quaggaFrameTimer); quaggaFrameTimer=null; } if(mediaStream){ try{ mediaStream.getTracks().forEach(t=>t.stop()); }catch(e){} mediaStream=null; } removeExistingVideos(); }
+
+function onFoundRaw(raw){
+  if(!scanningActive) return;
+  scanningActive=false;
+  const code = (''+raw).trim();
+  const matched = desiredPin ? (desiredPin===code ? students[desiredPin] : (students[code] || null)) : (students[code] || null);
+  if(matched){ playSuccess(); matched.classesAttended = Math.min(matched.totalClasses, matched.classesAttended+1); saveState(); refreshUI(); openProfile(matched.pin); showToast(`${matched.name} marked — ${percent(matched)}%`); }
+  else{ playError(); showToast(`No student found for: ${code}`); }
+  stopScanning();
+  setTimeout(()=> scannerOverlay.style.display='none', 700);
+}
+
+async function startScanning(videoEl, canvasEl, canvasCtx){
+  scanningActive = true;
+  // 1) BarcodeDetector
+  if('BarcodeDetector' in window){
+    try{
+      const detector = new BarcodeDetector({ formats: ['qr_code','code_128','ean_13','ean_8','code_39','upc_e','upc_a','i2of5'] });
+      const run = async ()=>{ if(!scanningActive) return; try{ const dets = await detector.detect(videoEl); if(dets && dets.length){ onFoundRaw(dets[0].rawValue); return; } }catch(e){ console.warn('BarcodeDetector err', e); } jsqrTimer = setTimeout(run, 150); };
+      run(); return;
+    }catch(e){ console.warn('BarcodeDetector init failed', e); }
+  }
+  // 2) jsQR
+  const jsqrLoop = async ()=>{ if(!scanningActive) return; if(videoEl.readyState === videoEl.HAVE_ENOUGH_DATA){ canvasEl.width = videoEl.videoWidth; canvasEl.height = videoEl.videoHeight; canvasCtx.drawImage(videoEl,0,0,canvasEl.width,canvasEl.height); try{ const img = canvasCtx.getImageData(0,0,canvasEl.width,canvasEl.height); const code = jsQR(img.data,img.width,img.height); if(code && code.data){ onFoundRaw(code.data); return; } }catch(e){ console.warn('jsQR err', e); } } jsqrTimer = setTimeout(jsqrLoop, 160); };
+  jsqrLoop();
+  // 3) Quagga on frames (1D)
+  const quaggaFrame = async ()=>{ if(!scanningActive) return; try{ canvasEl.width = videoEl.videoWidth; canvasEl.height = videoEl.videoHeight; canvasCtx.drawImage(videoEl,0,0,canvasEl.width,canvasEl.height); const dataUrl = canvasEl.toDataURL('image/jpeg',0.9); Quagga.decodeSingle({ src:dataUrl, numOfWorkers:0, inputStream:{ size:800 }, decoder:{ readers:['code_128_reader','code_39_reader','i2of5_reader','ean_reader','ean_8_reader','upc_reader'] } }, function(result){ if(result && result.codeResult && result.codeResult.code){ onFoundRaw(result.codeResult.code); return; } }); }catch(e){ console.warn('Quagga frame err', e); } quaggaFrameTimer = setTimeout(quaggaFrame, 700); };
+  quaggaFrame();
+}
+
+/* ---------------- Test image (reliable demo path) ---------------- */
+document.getElementById('decodeMarkBtn')?.addEventListener('click', async ()=>{
+  const f = document.getElementById('fileToTest').files[0];
+  if(!f){ alert('Choose an image file first'); return; }
+  document.getElementById('decodeResult').textContent = 'Decoding...';
+  const url = URL.createObjectURL(f);
+  // try Quagga (1D) first
+  Quagga.decodeSingle({
+    src: url,
+    numOfWorkers: 0,
+    inputStream: { size: 1200 },
+    decoder: { readers: ['code_128_reader','code_39_reader','i2of5_reader','ean_reader','ean_8_reader','upc_reader'] }
+  }, function(result){
+    if(result && result.codeResult && result.codeResult.code){
+      handleDecoded(result.codeResult.code);
+      URL.revokeObjectURL(url);
+      return;
+    }
+    // fallback: try jsQR on loaded image (for QR)
+    const img = new Image();
+    img.onload = ()=> {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d'); ctx.drawImage(img,0,0);
+      try{
+        const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+        const qr = jsQR(imgData.data, imgData.width, imgData.height);
+        if(qr && qr.data){ handleDecoded(qr.data); } else { document.getElementById('decodeResult').textContent = 'No code detected (try better resolution)'; }
+      }catch(e){ document.getElementById('decodeResult').textContent = 'Decode error: ' + e; }
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = ()=> { document.getElementById('decodeResult').textContent = 'Cannot load image.'; URL.revokeObjectURL(url); };
+    img.src = url;
+  });
+});
+
+function handleDecoded(code){
+  document.getElementById('decodeResult').textContent = 'Decoded: ' + code;
+  // Try to match student
+  const s = students[code];
+  if(s){
+    playSuccess(); s.classesAttended = Math.min(s.totalClasses, s.classesAttended+1); saveState(); refreshUI(); openProfile(s.pin); showToast(`${s.name} marked — ${percent(s)}%`); document.getElementById('fileTestModal').classList.add('hidden');
+  } else {
+    playError(); showToast('No student with code: ' + code); document.getElementById('decodeResult').textContent += ' — no matching student';
+  }
+}
+
+/* close test image modal */
+document.getElementById('closeFileTest').addEventListener('click', ()=> document.getElementById('fileTestModal').classList.add('hidden'));
+document.getElementById('openTestImage').addEventListener('click', ()=> { document.getElementById('fileTestModal').classList.toggle('hidden'); });
+
+/* ---------------- Init app ---------------- */
+function init(){
+  loadState();
+  refreshUI();
+  // unlock audio on first click if user interacts
+  document.body.addEventListener('click', ()=> ensureAudioCtx(), { once:true });
+  showToast('Use Test Image (recommended demo). Upload barcode image and click Decode & Mark.', 5000);
+}
+if(localStorage.getItem('isLoggedIn') === 'true'){ document.getElementById('loginScreen').style.display='none'; init(); }
+else { document.getElementById('loginForm').addEventListener('submit', (e)=>{ e.preventDefault(); const u=document.getElementById('username').value.trim(), p=document.getElementById('password').value.trim(); if(u==='admin'&&p==='password'){ localStorage.setItem('isLoggedIn','true'); document.getElementById('loginScreen').style.display='none'; init(); } else alert('Use admin / password'); }); }
+
+/* simple logout */
+document.getElementById('logoutBtn').addEventListener('click', ()=> { if(confirm('Logout demo?')){ localStorage.removeItem('isLoggedIn'); location.reload(); } });
+
+/* Prevent camera autoplay duplication - defensive cleanup on unload */
+window.addEventListener('beforeunload', ()=> { try{ if(mediaStream) mediaStream.getTracks().forEach(t=>t.stop()); }catch(e){} });
+
+</script>
+</body>
+</html>

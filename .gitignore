@@ -25,3 +25,5 @@ backend/face_config.json
 .idea/
 .DS_Store
 Thumbs.db
+
+.vercel

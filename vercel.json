@@ -1,10 +1,26 @@
 {
   "version": 2,
   "cleanUrls": true,
-  "rewrites": [
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": "/$1"
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "dashboard.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "js/dashboard.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "file.jpg",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "frontend/*",
+      "use": "@vercel/static"
     }
   ]
 }
